@@ -34,7 +34,9 @@ func (lru *windowLRU) add(newitem storeItem) (eitem storeItem, evicted bool) {
 	delete(lru.data, item.key)
 
 	eitem, *item = *item, newitem
-	lru.data[item.key] = lru.list.PushFront(evictItem)
+	lru.list.PushFront(evictItem)
+	lru.data[item.key] = evictItem
+	// lru.list.MoveToFront(evictItem)
 	return eitem, true
 }
 

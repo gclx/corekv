@@ -40,7 +40,6 @@ func (s *cmSketch) Increment(hashed uint64) {
 }
 
 func (s *cmSketch) Estimate(hashed uint64) int64 {
-	//implement me here!!!
 	min := byte(255)
 	for i := range s.rows {
 		val := s.rows[i].get((hashed ^ s.seed[i]) & s.mask)
@@ -48,6 +47,7 @@ func (s *cmSketch) Estimate(hashed uint64) int64 {
 			min = val
 		}
 	}
+
 	return int64(min)
 }
 

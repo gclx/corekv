@@ -2,9 +2,10 @@ package cache
 
 import (
 	"container/list"
-	xxhash "github.com/cespare/xxhash/v2"
 	"sync"
 	"unsafe"
+
+	xxhash "github.com/cespare/xxhash/v2"
 )
 
 type Cache struct {
