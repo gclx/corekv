@@ -14,4 +14,28 @@
 
 package lsm
 
+import (
+	"github.com/hardcore-os/corekv/file"
+	"github.com/hardcore-os/corekv/utils"
+)
+
 // TODO LAB 这里实现 table
+
+type table struct {
+	ss  *file.SSTable
+	lm  *levelManager
+	fid uint64
+}
+
+func openTable(lm *levelManager, tableName string, builder *SSTableBuilder) *table {
+	sstSize := int(lm.opt.SSTableMaxSz)
+	if builder != nil {
+		sstSize = int(builder.done().size)
+	}
+
+}
+
+func Search(key []byte, maxVs *uint64) (entry Entry, err error) {
+
+	return nil, utils.ErrKeyNotFound
+}

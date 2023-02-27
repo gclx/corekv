@@ -14,3 +14,44 @@
 package lsm
 
 // TODO LAB 这里实现 序列化
+
+type SSTableBuilder struct {
+	sstSize       int64
+	curBlock      *block
+	opt           *Options
+	blockList     []*block
+	keyCount      uint32
+	keyHashes     []uint32
+	maxVersion    uint64
+	baseKey       []byte
+	staleDataSize int
+	estimateSz    int64
+}
+
+type buildData struct {
+	blockList []*block
+	index     []byte
+	checksum  []byte
+	size      int
+}
+
+type block struct {
+	offset            int
+	checksum          []byte
+	chkLen            int
+	entriesIndexStart int
+	entryOffsets      []uint32
+	data              []byte
+	baseKey           []byte
+	end               int
+	estimateSz        int64
+}
+
+type header struct {
+	overlap uint16 // base key
+	diff    uint16 // diff key
+}
+
+func (sstb *SSTableBuilder) done() buildData {
+
+}

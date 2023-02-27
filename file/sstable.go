@@ -14,4 +14,25 @@
 
 package file
 
+import (
+	"os"
+	"sync"
+
+	"github.com/hardcore-os/corekv/utils"
+)
+
 // TODO LAB 在这里实现 sst 文件操作
+
+type SSTable struct {
+	lock   *sync.RWMutex
+	f      *MmapFile
+	maxKey []byte
+	minKey []byte
+	fid    uint64
+}
+
+func OpenSStable(opt *Options) *SSTable {
+	omf, err := OpenMmapFile(opt.FileName, os.O_CREATE|os.O_RDWR, opt.MaxSz)
+	utils.Err(err)
+	return &SSTable{f: omf, fid: uint64(opt.FID), lock: &sync.RWMutex{}}
+}
