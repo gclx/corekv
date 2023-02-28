@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"sort"
 	"sync"
+	"sync/atomic"
 
 	"github.com/hardcore-os/corekv/file"
+	"github.com/hardcore-os/corekv/iterator"
 	"github.com/hardcore-os/corekv/utils"
 	"github.com/hardcore-os/corekv/utils/codec"
 )
@@ -22,6 +24,7 @@ type levelHandler struct {
 	sync.RWMutex
 	levelNum int
 	tables   []*table
+	lm       *levelManager
 }
 
 func (lh *levelHandler) close() error {
@@ -61,7 +64,8 @@ func (lh *levelHandler) Sort() {
 func (lh *levelHandler) searchL0SST(key []byte) (*codec.Entry, error) {
 	var version uint64
 	for _, table := range lh.tables {
-		if entry, err := table.Serach(key, &version); err == nil {
+
+		if entry, err := table.Search(key, &version); err == nil {
 			return entry, nil
 		}
 	}
@@ -73,7 +77,7 @@ func (lh *levelHandler) searchLNSST(key []byte) (*codec.Entry, error) {
 	if table == nil {
 		return nil, utils.ErrKeyNotFound
 	}
-	if entry, err := table.Serach(key, &version); err == nil {
+	if entry, err := table.Search(key, &version); err == nil {
 		return entry, nil
 	}
 	return nil, utils.ErrKeyNotFound
@@ -135,7 +139,7 @@ func (lm *levelManager) loadCache() {
 	// 添加 idx cache
 	for _, level := range lm.levels {
 		for _, table := range level.tables {
-			lm.cache.addIndex(table.ss.FID(), table)
+			lm.cache.addIndex(uint32(table.ss.FID()), table)
 		}
 	}
 }
@@ -149,6 +153,7 @@ func (lm *levelManager) build() error {
 		lm.levels = append(lm.levels, &levelHandler{
 			levelNum: i,
 			tables:   make([]*table, 0),
+			lm:       lm,
 		})
 	}
 
@@ -157,6 +162,8 @@ func (lm *levelManager) build() error {
 	if err := lm.manifestFile.RevertToManifest(utils.LoadIDMap(lm.opt.WorkDir)); err != nil {
 		return err
 	}
+	lm.cache = newCache(lm.opt)
+
 	var maxFid uint64
 	for fID, tableInfo := range manifest.Tables {
 		fileName := utils.FileNameSSTable(lm.opt.WorkDir, fID)
@@ -178,7 +185,33 @@ func (lm *levelManager) build() error {
 }
 
 // 向L0层flush一个sstable
-func (lm *levelManager) flush(immutable *memTable) error {
+func (lm *levelManager) flush(immutable *memTable) (err error) {
 	// TODO LAB
+	// 分配fid
+	nextID := atomic.AddUint64(&lm.maxFid, 1)
+	sstName := utils.FileNameSSTable(lm.opt.WorkDir, nextID)
+
+	// 构建builder
+	builder := NewTableBuilder(lm.opt)
+	iter := immutable.sl.NewIterator(&iterator.Options{})
+	for iter.Rewind(); iter.Valid(); iter.Next() {
+		entry := iter.Item().Entry()
+		builder.add(entry)
+	}
+
+	// 创建一个table对象
+	table := openTable(lm, sstName, builder)
+
+	// 更新manifest文件
+	lm.levels[0].add(table)
+	err = lm.manifestFile.AddTableMeta(0, &file.TableMeta{
+		ID:       nextID,
+		Checksum: []byte{'m', 'o', 'c', 'k'},
+	})
+
+	// manifest写入失败则panic
+	utils.CondPanic(err != nil, err)
+
+	immutable.close()
 	return nil
 }

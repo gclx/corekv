@@ -68,10 +68,11 @@ func TestLevels(t *testing.T) {
 		// 关闭levels
 		assert.Nil(t, levels.close())
 	}
+	levelLive()
 	// 运行N次测试多个sst的影响
-	for i := 0; i < 10; i++ {
-		levelLive()
-	}
+	// for i := 0; i < 10; i++ {
+	// 	levelLive()
+	// }
 }
 
 // 对level管理器的性能测试

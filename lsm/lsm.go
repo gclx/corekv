@@ -103,11 +103,16 @@ func (lsm *LSM) Get(key []byte) (*codec.Entry, error) {
 	if entry, err = lsm.memTable.Get(key); entry != nil {
 		return entry, err
 	}
-	for _, imm := range lsm.immutables {
-		if entry, err = imm.Get(key); entry != nil {
+	for i := len(lsm.immutables) - 1; i >= 0; i-- {
+		if entry, err = lsm.immutables[i].Get(key); entry != nil {
 			return entry, err
 		}
 	}
+	// for _, imm := range lsm.immutables {
+	// 	if entry, err = imm.Get(key); entry != nil {
+	// 		return entry, err
+	// 	}
+	// }
 	// 从level manger查询
 	return lsm.levels.Get(key)
 }
